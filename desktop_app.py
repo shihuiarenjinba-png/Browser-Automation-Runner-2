@@ -16,6 +16,7 @@ from browser_runner import BrowserRunner, BrowserRunnerError
 from guided_config import GuidedConfigError, make_screenshot_workflow, save_new_config
 from step_builder_panel import BrowserStepBuilder
 from ui_language import load_language, save_language
+from consumer_visual_style import apply_consumer_theme
 
 APP_ID = "browser-automation-runner-2"
 
@@ -23,9 +24,10 @@ APP_ID = "browser-automation-runner-2"
 class BrowserAutomationDesktop:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
+        apply_consumer_theme(root)
         self.lang = load_language(APP_ID)
-        self.root.geometry("1020x740")
-        self.root.minsize(880, 640)
+        self.root.geometry("960x640")
+        self.root.minsize(820, 570)
         self.config_path = tk.StringVar()
         self.guide_root = tk.StringVar()
         self.guide_url = tk.StringVar(value="https://example.com")
@@ -41,7 +43,7 @@ class BrowserAutomationDesktop:
             self.config_path.set(str(default))
             self._load_config(False)
         else:
-            self.status.set(self.t("APIが無い場合の最終手段", "Advanced fallback only"))
+            self.status.set(self.t("最初に作業を設定してください。", "Start by creating a task."))
 
     def t(self, ja: str, en: str) -> str:
         return en if self.lang == "en" else ja
@@ -51,7 +53,7 @@ class BrowserAutomationDesktop:
             self.builder_steps = [dict(x) for x in self.step_builder.steps]
         for child in self.root.winfo_children():
             child.destroy()
-        self.root.title(self.t("ブラウザ自動化 — 上級", "Browser Automation Runner — Advanced"))
+        self.root.title(self.t("ブラウザ自動化 -2", "Browser Automation Runner -2"))
 
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill="both", expand=True)
@@ -94,7 +96,7 @@ class BrowserAutomationDesktop:
         ttk.Button(cfg, text=self.t("選択", "Browse"), command=self._browse).pack(side="left", padx=(8, 0))
         ttk.Button(cfg, text=self.t("検証", "Validate"), command=lambda: self._load_config(True)).pack(side="left", padx=(6, 0))
 
-        summary = ttk.LabelFrame(outer, text=self.t("通信境界", "Network boundary"), padding=8)
+        summary = ttk.LabelFrame(outer, text=self.t("接続先・安全確認", "Connection and safety"), padding=8)
         summary.pack(fill="x", pady=(0, 10))
         self.summary = ttk.Treeview(summary, columns=("item", "value"), show="headings", height=5)
         self.summary.heading("item", text=self.t("項目", "Item"))
@@ -105,14 +107,15 @@ class BrowserAutomationDesktop:
 
         stepbox = ttk.LabelFrame(outer, text=self.t("操作手順", "Steps"), padding=8)
         stepbox.pack(fill="both", expand=True, pady=(0, 10))
-        self.steps = tk.Listbox(stepbox, height=10)
+        self.steps = tk.Listbox(stepbox, height=6)
         self.steps.pack(fill="both", expand=True)
 
         actions = ttk.LabelFrame(outer, text=self.t("実行", "Execution"), padding=10)
         actions.pack(fill="x", pady=(0, 10))
         self.dry_btn = ttk.Button(actions, text=self.t("設定確認（Dry Run）", "Dry Run / Validate"), command=self._dry_run)
         self.dry_btn.pack(side="left")
-        self.run_btn = ttk.Button(actions, text=self.t("ブラウザ実行", "Run Browser"), command=self._run_live)
+        self.run_btn = ttk.Button(actions, text=self.t("ブラウザ実行", "Run Browser"),
+                                  command=self._run_live, style="Action.TButton")
         self.run_btn.pack(side="left", padx=6)
         ttk.Label(
             actions,
@@ -125,7 +128,7 @@ class BrowserAutomationDesktop:
 
         logbox = ttk.LabelFrame(outer, text=self.t("結果", "Result"), padding=8)
         logbox.pack(fill="both", expand=True)
-        self.log = tk.Text(logbox, wrap="word", height=10, state="disabled", font=("Consolas", 9))
+        self.log = tk.Text(logbox, wrap="word", height=5, state="disabled", font=("Consolas", 10))
         self.log.pack(fill="both", expand=True)
         ttk.Label(outer, textvariable=self.status).pack(fill="x", pady=(8, 0))
         if self._live_running:
@@ -146,12 +149,10 @@ class BrowserAutomationDesktop:
         self.guide_language.pack(side="right")
         self.guide_language.bind("<<ComboboxSelected>>", self._guide_language_changed)
         ttk.Label(pane, text=self.t(
-            "登録したWebページを開き、クリック・入力・画像保存などの手順を自動化します。\n"
-            "簡易設定でページ画像を保存できます。さらに「操作手順を作る」タブでクリック・入力・ダウンロード等を追加できます。\n"
-            "Webサイトの操作画面が変わると失敗する場合があります。APIが利用できる場合はAPIを優先してください。",
-            "Automate predefined website steps such as navigation, clicking, form entry, and screenshots.\n"
-            "Start with a page capture, then use Build steps to add click, fill and download actions.\n"
-            "Website UI changes can break workflows. Prefer official APIs whenever available.",
+            "Webページの画像保存やクリック・入力を、決めた手順に沿って自動化します。\n"
+            "①保存先とURLを指定 → ②必要なら操作を追加 → ③内容を確認してから実行。",
+            "Automate page screenshots, clicks and form input using steps you define.\n"
+            "1. Choose a save folder and URL → 2. Add steps if needed → 3. Review before running.",
         ), wraplength=870, justify="left").pack(anchor="w", pady=(0, 14))
         fields = ttk.LabelFrame(pane, text=self.t("① 作成する操作を指定", "1. Set up a page capture"), padding=12)
         fields.pack(fill="x", pady=(0, 12))
@@ -175,21 +176,29 @@ class BrowserAutomationDesktop:
             "3. On the next screen, Dry Run validates settings. Confirm a real browser run to capture the page.\n"
             "Existing screenshots are never overwritten.",
         ), wraplength=870, justify="left").pack(anchor="w", pady=(4, 12))
-        ttk.Button(pane, text=self.t("設定を保存して次へ →", "Save setup and continue →"),
-                   command=self._create_guided_config).pack(anchor="w", pady=(0, 10))
-        ttk.Button(pane, text=self.t("クリック・入力・保存の手順を画面で追加 →", "Build click/fill/download steps →"),
-                   command=lambda: self.notebook.select(self.step_tab)).pack(anchor="w", pady=(0, 10))
-        ttk.Button(pane, text=self.t("保存した設定を開く", "Open a saved setup"),
-                   command=lambda: self.notebook.select(self.advanced_tab)).pack(anchor="w")
+        primary_actions = ttk.Frame(pane)
+        primary_actions.pack(fill="x", pady=(0, 8))
         ttk.Button(
-            pane, text=self.t("ブラウザ実行環境を確認（通信なし）", "Check Chromium availability (offline)"),
+            primary_actions, text=self.t("設定を保存して次へ →", "Save setup and continue →"),
+            command=self._create_guided_config, style="Action.TButton",
+        ).pack(side="left", padx=(0, 10))
+        ttk.Button(
+            primary_actions, text=self.t("操作手順を追加する →", "Add optional steps →"),
+            command=lambda: self.notebook.select(self.step_tab),
+        ).pack(side="left")
+        secondary_actions = ttk.Frame(pane)
+        secondary_actions.pack(fill="x")
+        ttk.Button(
+            secondary_actions, text=self.t("保存した設定を開く", "Open a saved setup"),
+            command=lambda: self.notebook.select(self.advanced_tab),
+        ).pack(side="left", padx=(0, 10))
+        ttk.Button(
+            secondary_actions, text=self.t("ブラウザ環境を確認（通信なし）", "Check browser availability (offline)"),
             command=self._check_browser_runtime,
-        ).pack(anchor="w", pady=(9, 0))
+        ).pack(side="left")
         ttk.Label(pane, text=self.t(
-            "注意：この「画像を保存」ボタンだけではクリック・ログインを実行しません。\n"
-            "操作手順タブではクリック・入力・保存を設定できます。ログインが必要な操作は事前に動作を確かめてください。",
-            "This capture-only button never clicks forms or logs in. The Build steps tab supports explicit input, clicks and downloads.\n"
-            "Use only websites and accounts you are authorized to automate.",
+            "安全確認：設定を保存する段階ではブラウザは起動しません。実行前に操作内容と接続先を確認してください。",
+            "Saving a setup does not start a browser. Review each action and the destination before a live run.",
         ), wraplength=870, justify="left").pack(anchor="w", pady=(16, 0))
 
     def _guide_language_changed(self, _event=None) -> None:
