@@ -45,6 +45,11 @@ def apply_consumer_theme(root: tk.Tk) -> None:
                     padding=(16, 10), font=("Segoe UI", 10, "bold"))
     style.map("Action.TButton", background=[("active", "#7754da"), ("disabled", "#3b305a")],
               foreground=[("disabled", "#9cabc0")])
+    style.configure("TNotebook", background=bg, borderwidth=0)
+    style.configure("TNotebook.Tab", background=card, foreground=text,
+                    font=("Segoe UI", 10, "bold"), padding=(17, 10))
+    style.map("TNotebook.Tab", background=[("selected", "#4d3b7e"), ("active", "#33445d")],
+              foreground=[("selected", "#ffffff"), ("active", "#ffffff")])
     style.configure("TScrollbar", background=card, troughcolor=bg)
     style.configure("Treeview", background=field, foreground=text, fieldbackground=field,
                     borderwidth=0, rowheight=29, font=("Segoe UI", 10))
