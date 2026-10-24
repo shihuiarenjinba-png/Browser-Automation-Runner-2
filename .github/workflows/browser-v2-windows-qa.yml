@@ -41,6 +41,17 @@ jobs:
       - name: Build unsigned EXE with Playwright Chromium for QA
         shell: pwsh
         run: ./build_windows.ps1
+      - name: Install Pillow for screenshot evidence
+        run: python -m pip install "Pillow>=11,<13"
+      - name: Verify three Windows GUI tabs offline
+        run: python qa_windows_gui.py --output gui-review-evidence
+      - name: Upload Browser -2 GUI screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: BrowserAutomationRunner2-GUI-QA-Evidence
+          path: gui-review-evidence/**
+          if-no-files-found: warn
       - name: Upload QA_UNSIGNED development payload (never Store MSIX)
         uses: actions/upload-artifact@v4
         with:
